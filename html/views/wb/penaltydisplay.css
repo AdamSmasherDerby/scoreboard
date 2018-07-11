@@ -10,10 +10,14 @@ table,tr,th,td{
 	padding: 0px;
 	}
 
+.Title{
+	margin: 0px;
+	text-align: center;
+}
+
 .Team {
 	position: absolute;
 	width: 49%;
-	top: 0%;
 }
 
 .Team thead td { font-size: 1em; font-weight: bold; background-color: #222; color: #FFF; }

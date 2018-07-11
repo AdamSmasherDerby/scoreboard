@@ -88,46 +88,68 @@ function displayPenalty(t, s, p) {
 	var rowPeriod;
 	var rowJam;
 	var row;
-	var newRow
+	var newRow;
+	var updateMatch;
 	
-	//TODO - Make foul outs and expulsions pretty.
+	//TODO - Reorder at least the first two penalties for the same skater in the same jam
 	
-	if (code == null){
-	// If a penalty is cleared, remove it from the table and append a blank line at the end.
-	// Regenerating the entire table might be an option, but this is probably preferable,
-	// given that there's no way to enforce same jam penalties going back up in the right order.
-		var clearMatch = teamTable.find('tr')
-			.filter(function() {return $(this).data("id") == s && $(this).data("penalty") == p})
-		if (clearMatch.size() > 0) {
-			clearMatch.remove();
-			teamTable.append($("<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>"));
+	if (p == 'FO_EXP'){ p = 10 } // Use p = 10 to ensure FO/EXPs always get sorted first.
+	
+	// Handle cleared and updated penalties.
+	updateMatch = teamTable.find('tr')
+		.filter(function() {return $(this).data("id") == s && $(this).data("penalty") == p})
+	if (updateMatch.size() > 0){
+		if (code == null){
+		// If a penalty is cleared, remove it from the table and append a blank line at the end.
+		// Regenerating the entire table might be an option, but this is probably preferable,
+		// given that there's no way to enforce same jam penalties going back up in the right order.
+			updateMatch.remove();
+			teamTable.append($('<tr><td class="Number">&nbsp;</td>'
+					+ '<td class="Name">&nbsp;</td><td class="Code">&nbsp;</td></tr>'));
 			totalPenalties[t] -= 1;
 			setTeamName(t);
+		} else {
+		// If a penalty is updated, update the code and the text, but don't change the total.
+			updateMatch.data("code") == code;
+			updateMatch.find('td.Code').text(code + ' (' + p +')');
 		}
-		return
+		return;
+	}
+	
+	if (code == null){
+	// Null codes can arrive in any order when board is reloaded.
+		return;
 	}
 	
 	for (var n = 1; n <= nrows; n++){
 	// If this penalty is more recent than any of the penalties in the list, insert it
 	// in the list at that point. (starting from the top)
 		row = teamTable.find('tr:eq(' + n + ')')
-		rowPeriod = row.data().period
-		rowJam = row.data().jam
-		if (rowPeriod == undefined
-			|| period > rowPeriod 
-			|| (period == rowPeriod && jam >= rowJam)){
-				newRow = $('<tr>').addClass('Penalty').data({
-					"period": period, 
-					"jam": jam,
-					"id": s,
-					"penalty": p
+		
+		if (row.data().period== undefined
+			|| period > row.data().period
+			|| (period == row.data().period && jam == row.data().jam && s == row.data().id && p > row.data().penalty)
+			|| (period == row.data().period && jam >= row.data().jam && s != row.data().id)){
+			
+			// Create a new row for the penalty
+			newRow = $('<tr>').addClass('Penalty').data({
+				"period": period, 
+				"jam": jam,
+				"id": s,
+				"penalty": p
 			});
 			newRow.append($('<td>').addClass('Number').text(number));
 			newRow.append($('<td>').addClass('Name').text(name));
-			newRow.append($('<td>').addClass('Code').text(code + ' (' + p + ')'));
+			if (p != 10) {
+				newRow.append($('<td>').addClass('Code').text(code + ' (' + p + ')'));
+				totalPenalties[t] += 1;
+			} else {
+				newRow.append($('<td>').addClass('Code').text(code))
+			}
+			
+			// Insert the row, remove the last row, and update the totals.
 			row.before(newRow);
 			teamTable.find('tr:last').remove();
-			totalPenalties[t] += 1;
 			setTeamName(t);
 			return;
 		}
@@ -154,6 +176,22 @@ function setTeamName(t) {
 	head.innerHTML = '<span class="Team' + t + 'custColor"; style="font-size: 200%;">' + teamName + ' - ' + totalPenalties[t] +  '</span>';
 }
 
-
+function nPenalties(t, id) {
+// Given a team and skater ID, get the number of penalties presently in the state.
+	var prefix = 'ScoreBoard.Team(' + t + ').Skater(' + id + ').Penalty(';
+	var nPenalties = 0;
+	var code = '';
+	
+	for (var n=1; n < 10; n++){
+		code = WS.state[prefix + n + ').Code']
+		if (code == undefined){
+			return nPenalties;
+		} else if (code != 'FO_EXP'){
+			nPenalties += 1
+		}
+	}
+	
+	return nPenalties;
+}
 
 
