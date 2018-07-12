@@ -4,6 +4,7 @@ var period = null;
 var jam = null;
 var nrows = 5;
 var totalPenalties = {1: 0, 2: 0}
+var skaterList = {1: {}, 2: {}}
 
 function initialize() {
 // Run when the screen is loaded
@@ -75,15 +76,15 @@ function skaterUpdate(t, k, v) {
 	}
 }
 
-function displayPenalty(t, s, p) { 
+function displayPenalty(t, id, p) { 
 	// Given a team, a skater ID, penalty number, name, and number, update the table.
 	
-	var prefix = 'ScoreBoard.Team(' + t + ').Skater(' + s + ').Penalty(' + p + ')';
+	var prefix = 'ScoreBoard.Team(' + t + ').Skater(' + id + ').Penalty(' + p + ')';
 	var period = WS.state[prefix + '.Period'];
 	var jam = WS.state[prefix + '.Jam'];
 	var code = WS.state[prefix + '.Code'];
-	var name = WS.state['ScoreBoard.Team(' + t + ').Skater(' + s + ').Name']
-	var number = WS.state['ScoreBoard.Team(' + t + ').Skater(' + s + ').Number']
+	var name = WS.state['ScoreBoard.Team(' + t + ').Skater(' + id + ').Name']
+	var number = WS.state['ScoreBoard.Team(' + t + ').Skater(' + id + ').Number']
 	var teamTable = $('.Team' + t + ' tbody');
 	var rowPeriod;
 	var rowJam;
@@ -97,7 +98,7 @@ function displayPenalty(t, s, p) {
 	
 	// Handle cleared and updated penalties.
 	updateMatch = teamTable.find('tr')
-		.filter(function() {return $(this).data("id") == s && $(this).data("penalty") == p})
+		.filter(function() {return $(this).data("id") == id && $(this).data("penalty") == p})
 	if (updateMatch.size() > 0){
 		if (code == null){
 		// If a penalty is cleared, remove it from the table and append a blank line at the end.
@@ -106,10 +107,12 @@ function displayPenalty(t, s, p) {
 			updateMatch.remove();
 			teamTable.append($('<tr><td class="Number">&nbsp;</td>'
 					+ '<td class="Name">&nbsp;</td><td class="Code">&nbsp;</td></tr>'));
-			totalPenalties[t] -= 1;
+			if (p != 10) { delete skaterList[t][id][p]};
+			totalPenalties[t] = getTotalPenalties(t);
 			setTeamName(t);
 		} else {
 		// If a penalty is updated, update the code and the text, but don't change the total.
+			skaterList[t][id][p] = code;
 			updateMatch.data("code") == code;
 			updateMatch.find('td.Code').text(code + ' (' + p +')');
 		}
@@ -121,7 +124,15 @@ function displayPenalty(t, s, p) {
 		return;
 	}
 	
-	if (p != 10) {totalPenalties[t] += 1} // Increment the penalty count
+	// If this skater is not in skaterList, add them.
+	if (!skaterList[t].hasOwnProperty(id)) { skaterList[t][id] = {} }
+	
+	// If this penalty is not in skaterList[t].id, add it.
+	if (!skaterList[t][id].hasOwnProperty(p) && p != 10) {skaterList[t][id][p] = code}
+	
+	// Update Totals
+	totalPenalties[t] = getTotalPenalties(t);
+	setTeamName(t);
 	
 	for (var n = 1; n <= nrows; n++){
 	// If this penalty is more recent than any of the penalties in the list, insert it
@@ -130,14 +141,14 @@ function displayPenalty(t, s, p) {
 		
 		if (row.data().period== undefined
 			|| period > row.data().period
-			|| (period == row.data().period && jam == row.data().jam && s == row.data().id && p > row.data().penalty)
-			|| (period == row.data().period && jam >= row.data().jam && s != row.data().id)){
+			|| (period == row.data().period && jam == row.data().jam && id == row.data().id && p > row.data().penalty)
+			|| (period == row.data().period && jam >= row.data().jam && id != row.data().id)){
 			
 			// Create a new row for the penalty
 			newRow = $('<tr>').addClass('Penalty').data({
 				"period": period, 
 				"jam": jam,
-				"id": s,
+				"id": id,
 				"penalty": p
 			});
 			newRow.append($('<td>').addClass('Number').text(number));
@@ -151,7 +162,6 @@ function displayPenalty(t, s, p) {
 			// Insert the row, remove the last row, and update the totals.
 			row.before(newRow);
 			teamTable.find('tr:last').remove();
-			setTeamName(t);
 			return;
 		}
 	}
@@ -195,4 +205,16 @@ function nPenalties(t, id) {
 	return nPenalties;
 }
 
+function getTotalPenalties(t) {
+// Get the total number of penalties in skaterList for a team.
+	var total = 0;
+	
+	var skaterNumbers = Array.from(Object.keys(skaterList[t]));
+	for (var idx in skaterNumbers) {
+		var id = skaterNumbers[idx];
+		total += Object.keys(skaterList[t][id]).length;
+	}
+	
+	return total;
+}
 
