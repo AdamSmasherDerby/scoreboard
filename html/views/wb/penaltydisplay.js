@@ -121,6 +121,8 @@ function displayPenalty(t, s, p) {
 		return;
 	}
 	
+	if (p != 10) {totalPenalties[t] += 1} // Increment the penalty count
+	
 	for (var n = 1; n <= nrows; n++){
 	// If this penalty is more recent than any of the penalties in the list, insert it
 	// in the list at that point. (starting from the top)
@@ -142,7 +144,6 @@ function displayPenalty(t, s, p) {
 			newRow.append($('<td>').addClass('Name').text(name));
 			if (p != 10) {
 				newRow.append($('<td>').addClass('Code').text(code + ' (' + p + ')'));
-				totalPenalties[t] += 1;
 			} else {
 				newRow.append($('<td>').addClass('Code').text(code))
 			}
