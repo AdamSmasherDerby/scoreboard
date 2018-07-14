@@ -142,7 +142,7 @@ function displayPenalty(t, id, p) {
 		if (row.data().period== undefined
 			|| period > row.data().period
 			|| (period == row.data().period && jam == row.data().jam && id == row.data().id && p > row.data().penalty)
-			|| (period == row.data().period && jam >= row.data().jam && id != row.data().id)){
+			|| (period == row.data().period && jam > row.data().jam)){
 			
 			// Create a new row for the penalty
 			newRow = $('<tr>').addClass('Penalty').data({
@@ -185,6 +185,8 @@ function setTeamName(t) {
 
 	// Redo the header line for the team name.
 	head.innerHTML = '<span class="Team' + t + 'custColor"; style="font-size: 200%;">' + teamName + ' - ' + totalPenalties[t] +  '</span>';
+	$('.Team' + t + 'custColor').css('color', WS.state['ScoreBoard.Team(' + t + ').Color(overlay_fg)']); 
+	$('.Team' + t + 'custColor').css('background-color', WS.state['ScoreBoard.Team(' + t + ').Color(overlay_bg)']); 
 }
 
 function nPenalties(t, id) {
