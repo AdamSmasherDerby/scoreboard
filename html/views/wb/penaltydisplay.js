@@ -89,10 +89,8 @@ function displayPenalty(t, id, p) {
 	var rowPeriod;
 	var rowJam;
 	var row;
-	var newRow;
 	var updateMatch;
-	
-	//TODO - Reorder at least the first two penalties for the same skater in the same jam
+	var priorPenalty;
 	
 	if (p == 'FO_EXP'){ p = 10 } // Use p = 10 to ensure FO/EXPs always get sorted first.
 	
@@ -134,41 +132,80 @@ function displayPenalty(t, id, p) {
 	totalPenalties[t] = getTotalPenalties(t);
 	setTeamName(t);
 	
-	for (var n = 1; n <= nrows; n++){
-	// If this penalty is more recent than any of the penalties in the list, insert it
-	// in the list at that point. (starting from the top)
-		row = teamTable.find('tr:eq(' + n + ')')
+	// Create row to insert
+	var nr = newRow(period, jam, id, p, name, number, code);
+	var topRow = teamTable.find('tr:eq(1)');
+	var sameJamSameSkater = teamTable.find('tr').filter(function() {
+		return $(this).data("id") == id && $(this).data("jam") == jam && $(this).data("period") == period 
+	})
+	var sameJamDifferentSkater = teamTable.find('tr').filter(function() {
+		return $(this).data('id') != id && $(this).data('jam') == jam && $(this).data('period') == period 
+	})
+	
+	// When a new penalty arrives:
+	if (topRow == undefined
+			|| period > topRow.data().period
+			|| (period == topRow.data().period && jam > topRow.data().jam)){
+	// 0. Is the top row blank?  Insert this penalty at the top.
+	// 1. Is this penalty a later period than the top row?  Insert it at the top.
+	// 2. Is this penalty a later jam than the top row? Insert it at the top.
 		
-		if (row.data().period== undefined
-			|| period > row.data().period
-			|| (period == row.data().period && jam == row.data().jam && id == row.data().id && p > row.data().penalty)
-			|| (period == row.data().period && jam > row.data().jam)){
+		$(nr).insertBefore(topRow);
+		teamTable.find('tr:last').remove();
+		
+	} else if (sameJamDifferentSkater.size() > 0 && sameJamSameSkater.size() == 0) {
+	// 3. Is this penalty a penalty for a currently visible jam, but for a skater 
+	// who is not currently on the board for that jam? Insert it before the first 
+	// penalty for that jam. (Potentially wrong, but not soluble.)
+		
+		$(nr).insertBefore(sameJamDifferentSkater.find('tr:first'));
+		teamTable.find('tr:last').remove();
+		
+	} else if (sameJamSameSkater.size() > 0){
+	// 4. Is this penalty a penalty for a visible jam, but for a skater who IS 
+	// currently on the list for that jam?
+		
+		priorPenalties = sameJamSameSkater.filter(function() {
+			return( $(this).data('penalty') < p );
+		})
+		if (priorPenalties.size() == 0 ){
+		// If this penalty is earlier than every penalty on the board for the current jam for the 
+		// current skater, insert it after the last one. (Potentially out of order with other skaters, 
+		// but insoluble.)
 			
-			// Create a new row for the penalty
-			newRow = $('<tr>').addClass('Penalty').data({
-				"period": period, 
-				"jam": jam,
-				"id": id,
-				"penalty": p
-			});
-			newRow.append($('<td>').addClass('Number').text(number));
-			newRow.append($('<td>').addClass('Name').text(name));
-			if (p != 10) {
-				newRow.append($('<td>').addClass('Code').text(code + ' (' + p + ')'));
-			} else {
-				newRow.append($('<td>').addClass('Code').text(code))
-			}
-			
-			// Insert the row, remove the last row, and update the totals.
-			row.before(newRow);
+			$(nr).insertAfter(sameJamSameSkater.find('tr:last'));
 			teamTable.find('tr:last').remove();
-			return;
+			
+		} else {
+		// Otherwise, insert it above the latest prior penalty
+			
+			priorPenalties.sort(function(a,b) {return b.data('penalty') - a.data('penalty');})
+			$(nr).insertBefore(priorPenalties.find('tr:first'));
+			teamTable.find('tr:last').remove();
 		}
 	}
 	
-	
 	return;
 
+}
+
+function newRow(period, jam, id, p, name, number, code){
+// Given a period, jam, skater id, and penalty, create a row for the table.
+	
+	var newRow = $('<tr>').addClass('Penalty').data({
+		"period": period, 
+		"jam": jam,
+		"id": id,
+		"penalty": p
+	});
+	newRow.append($('<td>').addClass('Number').text(number));
+	newRow.append($('<td>').addClass('Name').text(name));
+	if (p != 10) {
+		newRow.append($('<td>').addClass('Code').text(code + ' (' + p + ')'));
+	} else {
+		newRow.append($('<td>').addClass('Code').text(code))
+	}
+	return newRow;
 }
 
 function setTeamName(t) {
