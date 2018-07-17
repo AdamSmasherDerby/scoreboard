@@ -2,7 +2,7 @@ $(initialize);
 
 var period = null;
 var jam = null;
-var nrows = 5;
+var nrows = 8;
 var totalPenalties = {1: 0, 2: 0}
 var skaterList = {1: {}, 2: {}}
 
@@ -16,6 +16,7 @@ function initialize() {
 
 	// For each team register connections for the name, alternate name, and colors
 	$.each([1, 2], function(idx, t) {
+		initializeTeam(t);
 		WS.Register( [ 'ScoreBoard.Team(' + t + ').Name' ], function(k, v) { setTeamName(t); }); 
 		WS.Register([ 'ScoreBoard.Team(' + t + ').AlternateName' ], function(k,v) { setTeamName(t) });
 		WS.Register([ 'ScoreBoard.Team(' + t + ').Color' ], function(k, v) { 
@@ -86,17 +87,16 @@ function displayPenalty(t, id, p) {
 	var name = WS.state['ScoreBoard.Team(' + t + ').Skater(' + id + ').Name']
 	var number = WS.state['ScoreBoard.Team(' + t + ').Skater(' + id + ').Number']
 	var teamTable = $('.Team' + t + ' tbody');
-	var rowPeriod;
-	var rowJam;
-	var row;
 	var updateMatch;
 	var priorPenalty;
+	var laterPenalties;
 	
 	if (p == 'FO_EXP'){ p = 10 } // Use p = 10 to ensure FO/EXPs always get sorted first.
 	
 	// Handle cleared and updated penalties.
 	updateMatch = teamTable.find('tr')
 		.filter(function() {return $(this).data("id") == id && $(this).data("penalty") == p})
+		
 	if (updateMatch.size() > 0){
 		if (code == null){
 		// If a penalty is cleared, remove it from the table and append a blank line at the end.
@@ -105,9 +105,17 @@ function displayPenalty(t, id, p) {
 			updateMatch.remove();
 			teamTable.append($('<tr><td class="Number">&nbsp;</td>'
 					+ '<td class="Name">&nbsp;</td><td class="Code">&nbsp;</td></tr>'));
-			if (p != 10) { delete skaterList[t][id][p]};
+			if (p != 10) { delete skaterList[t][id][p] };
 			totalPenalties[t] = getTotalPenalties(t);
 			setTeamName(t);
+			
+		// Update the row attributes for later penalties.
+			laterPenalties = teamTable.find('tr')
+				.filter(function() {return $(this).data('id') == id	&& $(this).data('penalty') > p})
+			laterPenalties.each(function(){
+				$(this).data('penalty') - 1;
+			})
+				
 		} else {
 		// If a penalty is updated, update the code and the text, but don't change the total.
 			skaterList[t][id][p] = code;
@@ -122,10 +130,8 @@ function displayPenalty(t, id, p) {
 		return;
 	}
 	
-	// If this skater is not in skaterList, add them.
+	// Update skater list.
 	if (!skaterList[t].hasOwnProperty(id)) { skaterList[t][id] = {} }
-	
-	// If this penalty is not in skaterList[t].id, add it.
 	if (!skaterList[t][id].hasOwnProperty(p) && p != 10) {skaterList[t][id][p] = code}
 	
 	// Update Totals
@@ -141,9 +147,14 @@ function displayPenalty(t, id, p) {
 	var sameJamDifferentSkater = teamTable.find('tr').filter(function() {
 		return $(this).data('id') != id && $(this).data('jam') == jam && $(this).data('period') == period 
 	})
+	var previousJamSamePeriod = teamTable.find('tr').filter(function() {
+		return ($(this).data('period') == period && $(this).data('jam') < jam)
+			|| ($(this).data('period') < period);
+	})
 	
 	// When a new penalty arrives:
 	if (topRow == undefined
+			|| topRow.data().period == undefined
 			|| period > topRow.data().period
 			|| (period == topRow.data().period && jam > topRow.data().jam)){
 	// 0. Is the top row blank?  Insert this penalty at the top.
@@ -158,7 +169,7 @@ function displayPenalty(t, id, p) {
 	// who is not currently on the board for that jam? Insert it before the first 
 	// penalty for that jam. (Potentially wrong, but not soluble.)
 		
-		$(nr).insertBefore(sameJamDifferentSkater.find('tr:first'));
+		$(nr).insertBefore(sameJamDifferentSkater[0]);
 		teamTable.find('tr:last').remove();
 		
 	} else if (sameJamSameSkater.size() > 0){
@@ -173,16 +184,33 @@ function displayPenalty(t, id, p) {
 		// current skater, insert it after the last one. (Potentially out of order with other skaters, 
 		// but insoluble.)
 			
-			$(nr).insertAfter(sameJamSameSkater.find('tr:last'));
+			$(nr).insertAfter(sameJamSameSkater.last());
 			teamTable.find('tr:last').remove();
 			
-		} else {
+		} else if (topRow.data().jam == jam && nPenalties(t,id) <= p){
+		// If this is the most recent penalty for this skater, and it is for the current jam,
+		// insert it at the top of the list.
+			
+			$(nr).insertBefore(topRow);
+			teamTable.find('tr:last').remove();
+			
+	    } else {
 		// Otherwise, insert it above the latest prior penalty
 			
-			priorPenalties.sort(function(a,b) {return b.data('penalty') - a.data('penalty');})
-			$(nr).insertBefore(priorPenalties.find('tr:first'));
+			if (priorPenalties.size() > 1) {
+				priorPenalties.sort(function(a,b) {
+					return $(b).data('penalty') - $(a).data('penalty');})
+			}
+			$(nr).insertBefore(priorPenalties.first());
 			teamTable.find('tr:last').remove();
-		}
+	    }
+		
+	} else if (sameJamDifferentSkater.size() == 0 && sameJamSameSkater.size() == 0 && previousJamSamePeriod.size() > 0 ) {
+			// 5. If there are earlier jams visible, but no penalties from this jam, insert it above the latest
+			// previous penalty.	
+
+				$(nr).insertBefore(previousJamSamePeriod.first());
+				teamTable.find('tr:last').remove();
 	}
 	
 	return;
@@ -257,3 +285,15 @@ function getTotalPenalties(t) {
 	return total;
 }
 
+function initializeTeam(t) {
+// Add the table body for each team.
+	var teamTable = $('.Team' + t + ' tbody');
+	
+	for (var row = 1; row <= nrows; row ++){
+		var newRow = $('<tr>').addClass('Penalty');
+		newRow.append($('<td>').addClass('Number').html('&nbsp;'));
+		newRow.append($('<td>').addClass('Name').html('&nbsp;'));
+		newRow.append($('<td>').addClass('Code').html('&nbsp;'));
+		teamTable.append(newRow)
+	}
+}
