@@ -90,6 +90,7 @@ function displayPenalty(t, id, p) {
 	var updateMatch;
 	var priorPenalty;
 	var laterPenalties;
+	var troubleBox = $('.Team' + t + ' .Trouble')
 	
 	if (p == 'FO_EXP'){ p = 10 } // Use p = 10 to ensure FO/EXPs always get sorted first.
 	
@@ -105,9 +106,14 @@ function displayPenalty(t, id, p) {
 			updateMatch.remove();
 			teamTable.append($('<tr><td class="Number">&nbsp;</td>'
 					+ '<td class="Name">&nbsp;</td><td class="Code">&nbsp;</td></tr>'));
-			if (p != 10) { delete skaterList[t][id][p] };
+			if (p == 10) { 
+				delete skaterList[t][id].fo 
+			} else {
+				delete skaterList[t][id][p]
+			};
 			totalPenalties[t] = getTotalPenalties(t);
 			setTeamName(t);
+			troubleBox.html(troubleString(t)) 
 			
 		// Update the row attributes for later penalties.
 			laterPenalties = teamTable.find('tr')
@@ -131,15 +137,18 @@ function displayPenalty(t, id, p) {
 	}
 	
 	// Update skater list.
-	if (!skaterList[t].hasOwnProperty(id)) { skaterList[t][id] = {} }
+	if (!skaterList[t].hasOwnProperty(id)) { skaterList[t][id] = {number: number} }
 	if (!skaterList[t][id].hasOwnProperty(p) && p != 10) {skaterList[t][id][p] = code}
+	if (p == 10) {skaterList[t][id].fo = true}
 	
 	// Update Totals
 	totalPenalties[t] = getTotalPenalties(t);
 	setTeamName(t);
+	troubleBox.html(troubleString(t));
 	
 	// Create row to insert
 	var nr = newRow(period, jam, id, p, name, number, code);
+	setRowColor(nr); 
 	var topRow = teamTable.find('tr:eq(1)');
 	var sameJamSameSkater = teamTable.find('tr').filter(function() {
 		return $(this).data("id") == id && $(this).data("jam") == jam && $(this).data("period") == period 
@@ -231,9 +240,17 @@ function newRow(period, jam, id, p, name, number, code){
 	if (p != 10) {
 		newRow.append($('<td>').addClass('Code').text(code + ' (' + p + ')'));
 	} else {
-		newRow.append($('<td>').addClass('Code').text(code))
+		newRow.append($('<td>').addClass('Code').text(expText(code)));
 	}
 	return newRow;
+}
+
+function setRowColor(row){
+// Given a row, set the color based on the number of penalties.
+	
+	row.toggleClass("Warn1", row.data('penalty') == 5 );
+	row.toggleClass("Warn2", row.data('penalty') == 6 );
+	row.toggleClass("Warn3", row.data('penalty') >= 7 );
 }
 
 function setTeamName(t) {
@@ -296,4 +313,43 @@ function initializeTeam(t) {
 		newRow.append($('<td>').addClass('Code').html('&nbsp;'));
 		teamTable.append(newRow)
 	}
+}
+
+function troubleString(t) {
+// Given a team id, return a string consisting of the skaters with 5 and 6 penalties
+		
+	var troubleList = {5: [], 6:[]};
+	var troubleString = ''
+
+	for (var key in skaterList[t]){
+		if (skaterList[t][key].hasOwnProperty('7') || skaterList[t][key].hasOwnProperty('fo')){
+			continue;
+		} else if (skaterList[t][key].hasOwnProperty('6')){
+			troubleList[6].push(skaterList[t][key].number);
+		} else if (skaterList[t][key].hasOwnProperty('5')) {
+			troubleList[5].push(skaterList[t][key].number);
+		}
+	}
+	
+	if (troubleList[5].length > 0) {
+		troubleString += '<span class="left">(5) ' + troubleList[5].join(', ') + '</span>';
+	} 
+	if (troubleList[6].length > 0) {
+		troubleString += '<span class="right">(6) ' + troubleList[6].join(', ') + '</span>';
+	}
+	
+	return troubleString;
+		
+	}
+
+
+function expText(txt) {
+// Given a string of the form 'EXP-x', return 'x (EXP)'
+// Return 'FO' unchanged
+	
+	if (txt == 'FO') { return txt; }
+	var expRegex = /EXP-(\w)/;
+	var match = txt.match(expRegex);
+	return match[1] + ' (EXP)';
+	
 }

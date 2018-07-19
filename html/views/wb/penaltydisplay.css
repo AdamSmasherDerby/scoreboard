@@ -9,7 +9,18 @@ table,tr,th,td{
 	border-color:#777;
 	border-spacing: 0;
 	padding: 0px;
+	caption-side: bottom;
 	}
+caption{
+	color: white;
+	text-align: left;
+}
+.left{
+	float: left;
+}
+.right{
+	float: right;
+}
 
 .Title{
 	margin: 0px;
@@ -30,13 +41,12 @@ table,tr,th,td{
 .Team tr:nth-child(4n-2), .Team tr:nth-child(4n-0) { background-color: #CCC; }
 .Team tr:nth-child(4n-1), .Team tr:nth-child(4n-3) { background-color: white; }
 
-.Team .Warn1 { background-color: #fffd38; }
-.Team .Warn1:nth-child(4n-2), .Team .Warn1:nth-child(4n-0) { background-color: #ccca2d; }
-.Team .Warn2 { background-color: #ff8f2b; }
-.Team .Warn2:nth-child(4n-2), .Team .Warn2:nth-child(4n-0) { background-color: #cc7222; }
-.Team .Warn3 { background-color: #ff8080; }
-.Team .Warn3:nth-child(4n-2), .Team .Warn3:nth-child(4n-0) { background-color: #cc2d2d; }
-
+.Team .Warn1:nth-child(4n-1) .Code, .Team .Warn1:nth-child(4n-3)  .Code { background-color: #fffd38; }
+.Team .Warn1:nth-child(4n-2) .Code, .Team .Warn1:nth-child(4n-0)  .Code { background-color: #e5e232; }
+.Team .Warn2:nth-child(4n-1) .Code, .Team .Warn2:nth-child(4n-3)  .Code { background-color: #ff8f2b; }
+.Team .Warn2:nth-child(4n-2) .Code, .Team .Warn2:nth-child(4n-0)  .Code { background-color: #e57f27; }
+.Team .Warn3:nth-child(4n-1) .Code, .Team .Warn3:nth-child(4n-3)  .Code { background-color: #ff8080; }
+.Team .Warn3:nth-child(4n-2) .Code, .Team .Warn3:nth-child(4n-0)  .Code { background-color: #e57272; }
 
 
 td.Name {
