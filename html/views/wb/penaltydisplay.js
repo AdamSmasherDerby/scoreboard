@@ -146,6 +146,11 @@ function displayPenalty(t, id, p) {
 	setTeamName(t);
 	troubleBox.html(troubleString(t));
 	
+	if (code == 'FO') {
+	// Do not add a line to the table for foulouts
+		return;
+	}
+	
 	// Create row to insert
 	var nr = newRow(period, jam, id, p, name, number, code);
 	setRowColor(nr); 
@@ -237,8 +242,10 @@ function newRow(period, jam, id, p, name, number, code){
 	});
 	newRow.append($('<td>').addClass('Number').text(number));
 	newRow.append($('<td>').addClass('Name').text(name));
-	if (p != 10) {
+	if (p < 7) {
 		newRow.append($('<td>').addClass('Code').text(code + ' (' + p + ')'));
+	} else if ( p >= 7 && p <=9) {
+		newRow.append($('<td>').addClass('Code').text(code + ' (' + p + ') FO'))
 	} else {
 		newRow.append($('<td>').addClass('Code').text(expText(code)));
 	}
