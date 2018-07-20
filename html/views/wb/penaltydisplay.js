@@ -109,7 +109,7 @@ function displayPenalty(t, id, p) {
 			if (p == 10) { 
 				delete skaterList[t][id].fo 
 			} else {
-				delete skaterList[t][id][p]
+				delete skaterList[t][id].penalties[p]
 			};
 			totalPenalties[t] = getTotalPenalties(t);
 			setTeamName(t);
@@ -124,7 +124,7 @@ function displayPenalty(t, id, p) {
 				
 		} else {
 		// If a penalty is updated, update the code and the text, but don't change the total.
-			skaterList[t][id][p] = code;
+			skaterList[t][id].penalties[p] = code;
 			updateMatch.data("code") == code;
 			updateMatch.find('td.Code').text(code + ' (' + p +')');
 		}
@@ -137,8 +137,8 @@ function displayPenalty(t, id, p) {
 	}
 	
 	// Update skater list.
-	if (!skaterList[t].hasOwnProperty(id)) { skaterList[t][id] = {number: number} }
-	if (!skaterList[t][id].hasOwnProperty(p) && p != 10) {skaterList[t][id][p] = code}
+	if (!skaterList[t].hasOwnProperty(id)) { skaterList[t][id] = {number: number, penalties: {}} }
+	if (!skaterList[t][id].penalties.hasOwnProperty(p) && p != 10) {skaterList[t][id].penalties[p] = code}
 	if (p == 10) {skaterList[t][id].fo = true}
 	
 	// Update Totals
@@ -303,7 +303,7 @@ function getTotalPenalties(t) {
 	var skaterNumbers = Array.from(Object.keys(skaterList[t]));
 	for (var idx in skaterNumbers) {
 		var id = skaterNumbers[idx];
-		total += Object.keys(skaterList[t][id]).length;
+		total += Object.keys(skaterList[t][id].penalties).length;
 	}
 	
 	return total;
@@ -329,11 +329,11 @@ function troubleString(t) {
 	var troubleString = ''
 
 	for (var key in skaterList[t]){
-		if (skaterList[t][key].hasOwnProperty('7') || skaterList[t][key].hasOwnProperty('fo')){
+		if (skaterList[t][key].penalties.hasOwnProperty('7') || skaterList[t][key].hasOwnProperty('fo')){
 			continue;
-		} else if (skaterList[t][key].hasOwnProperty('6')){
+		} else if (skaterList[t][key].penalties.hasOwnProperty('6')){
 			troubleList[6].push(skaterList[t][key].number);
-		} else if (skaterList[t][key].hasOwnProperty('5')) {
+		} else if (skaterList[t][key].penalties.hasOwnProperty('5')) {
 			troubleList[5].push(skaterList[t][key].number);
 		}
 	}
@@ -355,7 +355,7 @@ function expText(txt) {
 // Return 'FO' unchanged
 	
 	if (txt == 'FO') { return txt; }
-	var expRegex = /EXP-(\w)/;
+	var expRegex = /EXP-(\S)/;
 	var match = txt.match(expRegex);
 	return match[1] + ' (EXP)';
 	
