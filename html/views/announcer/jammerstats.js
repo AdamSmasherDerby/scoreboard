@@ -29,10 +29,16 @@ function initialize() {
 	});
 	
 	WS.Register( [ 'ScoreBoard.Clock(Period).Number' ], function(k, v) { period = v; });
-	WS.Register( [ 'ScoreBoard.Clock(Jam).Number' ], function(k, v) { jam = v;});
+	WS.Register( [ 'ScoreBoard.Clock(Jam).Number' ], function(k, v) { 
+		jam = v;
+		console.log('SCJN k: ', k, ' v: ',v);
+		newJam(period, jam);
+	});
 
 	WS.Register( [ 'ScoreBoard.Team(1).Skater' ]); 
 	WS.Register( [ 'ScoreBoard.Team(2).Skater' ]); 
+	WS.Register( [ 'ScoreBoard.Team(1).Position(Jammer)']);
+	WS.Register( [ 'ScoreBoard.Team(2).Position(Jammer)']);
 
 	WS.Register( [ 'Game' ], function(k,v){
 		processEvent(k,v);
@@ -50,10 +56,28 @@ function priorJamScore(k, v) {
 		// Update display
 }
 
-function newJam(k, v) {
-	// Add the "current jam" score for the two prior jammers to their "prior total" points
-	// Clear the "current jam" score for the two prior jammers.	
-	// Add the new jammers to the list if they are not present.
+function newJam(period, jam) {
+	var id = '';
+	var priorJam = 0;
+	var priorJammer = '';
+	
+	
+	//TODO account for start of period 2
+	$.each([1,2], function(idx, t) {
+		var priorJam = jam - 1
+		var priorJammer = WS.state['Game.Period(' + period + ').Jam(' + priorJam + ').Team(' + t + ').Skater(Jammer).Id'];
+		if (priorJammer == undefined) { return; }
+		jammerList[priorJammer].priorScore += jammerList[priorJammer] + currentScore;
+		jammerList[priorJammer].currentScore = 0;
+	})
+	
+	
+	// Add the current jammer to the list.
+	$.each([1, 2], function(idx, t) {
+		id = WS.state['ScoreBoard.Team(' + t + ').Position(Jammer).Skater'];
+		if (id == null) { return; }
+		addJammer(t,id);
+	})
 
 }
 
@@ -76,13 +100,13 @@ function processEvent(k, v) {
 		// If this is the second period, add all the jammers for the first period
 			var j = 1;
 			while (WS.state['Game.Period(1).Jam(' + j + ').Jam'] != undefined){
-				addJammers(1,j);
+				addPriorJammers(1,j);
 				j++;
 			}			
 		}
-		for (var j = 1; j <= currentJam; j++){
-		// Add all the jammers for the current period
-			addJammers(currentPeriod, j);
+		for (var j = 1; j < currentJam; j++){
+		// Add all the prior jammers for the current period
+			addPriorJammers(currentPeriod, j);
 		}
 	}
 	
@@ -91,8 +115,10 @@ function processEvent(k, v) {
 	
 }
 
-function addJammers(p,j) {
-// Given a period and a jam number, add both jammers to the list if they are entered and not in the list
+function addPriorJammers(p,j) {
+// Given a period and a jam number, add both jammers to the list if they 
+// are entered and not in the list.  Also update statistics.  This is for jammers prior to
+// the current jam
 	
 	var id;
 	var prefix;
@@ -102,23 +128,42 @@ function addJammers(p,j) {
 		id = WS.state['Game.Period(' + p + ').Jam(' + j + ').Team(' + t + ').Skater(Jammer).Id'];
 		if (id == null) { return; }
 		
-		prefix = 'ScoreBoard.Team(' + t + ').Skater(' + id + ')';
-		table = $('.Team' + t + ' tbody');
+		// Add the jammer to the list
+		addJammer(t,id);
+		updatePriorScore(t,id, p, j);
 		
-		if (!jammerList.hasOwnProperty(id)){
-		// If this is a new jammer, add them to the jammer list, and add a row to the display
-			jammerList[id] = {
-				name: WS.state[prefix + '.Name'],
-				number: WS.state[prefix + '.Number'],
-				team: t
-			}
-			table.append(makeJammerRow(id));
-		} else {
-			var jamsCell = $('.Team' + t + ' tbody tr.Jammer[data-number=' + jammerList[id].number + '] .Jams')
-			var jams = parseInt(jamsCell.html()) + 1;
-			jamsCell.html(jams);
-		}
 	})
+}
+
+function addJammer(t, id) {
+	// Given a team and Jammer ID, add them to the list if they are not present, and 
+	// increment their "Jams" count if they are.
+	prefix = 'ScoreBoard.Team(' + t + ').Skater(' + id + ')';
+	table = $('.Team' + t + ' tbody');
+	
+	if (!jammerList.hasOwnProperty(id)){
+	// If this is a new jammer, add them to the jammer list, and add a row to the display
+		jammerList[id] = {
+			name: WS.state[prefix + '.Name'],
+			number: WS.state[prefix + '.Number'],
+			team: t,
+			priorScore: 0,
+			currentScore: 0
+		}
+		table.append(makeJammerRow(id));
+	} else {
+		var jamsCell = $('.Team' + t + ' tbody tr.Jammer[data-number=' + jammerList[id].number + '] .Jams')
+		var jams = parseInt(jamsCell.html()) + 1;
+		jamsCell.html(jams);
+	}
+}
+
+function updatePriorScore(t, id, p, j){
+// Given a skater and a jam, add the score for that jam to that skater's priorScore total.
+	jammerList[id].priorScore += WS.state['Game.Period(' + p +').Jam(' + j + 
+		').Team(' + t + ').JamScore'];
+	var scoreCell = $('.Team' +t + ' tbody tr.Jammer[data-number=' + jammerList[id].number + '] .Pts');
+	scoreCell.html(jammerList[id].priorScore);
 }
 
 function resetTable() {
