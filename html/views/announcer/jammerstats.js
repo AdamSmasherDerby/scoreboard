@@ -19,11 +19,7 @@ function initialize() {
 			$('#head' + t).css('background-color', WS.state['ScoreBoard.Team(' + t + ').Color(overlay_bg)']); } );
 		
 		WS.Register([ 'ScoreBoard.Team(' + t + ').JamScore' ], function(k,v) {
-			// Find the ID for the jammer for the current jam
-			// If ID is not null:
-				// Move the current jam score to "current jam" for the jammer.
-				// Update display with current jam + prior score
-			console.log('k: ', k, ' v: ',v);
+			currentJamScore(k,v,t);
 		})
 		
 	});
@@ -31,7 +27,6 @@ function initialize() {
 	WS.Register( [ 'ScoreBoard.Clock(Period).Number' ], function(k, v) { period = v; });
 	WS.Register( [ 'ScoreBoard.Clock(Jam).Number' ], function(k, v) { 
 		jam = v;
-		console.log('SCJN k: ', k, ' v: ',v);
 		newJam(period, jam);
 	});
 
@@ -47,13 +42,20 @@ function initialize() {
 
 }
 
+function currentJamScore(k, v, t){
+// For a "jam score" event for the current jam:
+	console.log(k, v, t)
+	// Find the ID for the jammer for the current jam
+	var id = WS.state['ScoreBoard.Team('+t+').Position(Jammer).Skater'];
+	if (id == null || id == undefined) { return; }
 
-function priorJamScore(k, v) {
-	// For a "jam score" event for a prior jam:
-	// If the jammer is entered for the jam:
-		// Add them to the list if they do not exist.
-		// Add the score to their "prior total" points.
-		// Update display
+	// Move the current jam score to "current jam" for the jammer.
+	jammerList[id].currentScore = v;
+	
+	var scoreCell = $('.Team' +t + ' tbody tr.Jammer[data-number=' + 
+			jammerList[id].number + '] .Pts');
+	scoreCell.html(jammerList[id].priorScore + jammerList[id].currentScore);
+	
 }
 
 function newJam(period, jam) {
@@ -64,10 +66,10 @@ function newJam(period, jam) {
 	
 	//TODO account for start of period 2
 	$.each([1,2], function(idx, t) {
-		var priorJam = jam - 1
-		var priorJammer = WS.state['Game.Period(' + period + ').Jam(' + priorJam + ').Team(' + t + ').Skater(Jammer).Id'];
-		if (priorJammer == undefined) { return; }
-		jammerList[priorJammer].priorScore += jammerList[priorJammer] + currentScore;
+		priorJam = jam - 1;
+		priorJammer = WS.state['Game.Period(' + period + ').Jam(' + priorJam + ').Team(' + t + ').Skater(Jammer).Id'];
+		if (priorJammer == undefined || priorJammer == null || jammerList[priorJammer] == undefined) { return; }
+		jammerList[priorJammer].priorScore += jammerList[priorJammer].currentScore;
 		jammerList[priorJammer].currentScore = 0;
 	})
 	
@@ -104,7 +106,7 @@ function processEvent(k, v) {
 				j++;
 			}			
 		}
-		for (var j = 1; j < currentJam; j++){
+		for (var j = 1; j <= currentJam; j++){
 		// Add all the prior jammers for the current period
 			addPriorJammers(currentPeriod, j);
 		}
@@ -186,6 +188,7 @@ function makeJammerRow(id) {
 	
 	return row;
 }
+
 
 // Maybe come back to use this stuff.
 /*
