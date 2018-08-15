@@ -21,7 +21,9 @@ function initialize() {
 			processScoreboardColors(k,v,t);		
 		});
 		
-		WS.Register( [ 'ScoreBoard.Team(' + t + ').Skater' ] ); 
+		WS.Register( [ 'ScoreBoard.Team(' + t + ').Skater' ], function(k, v){
+			processPenalty(k,v,t);
+		} ); 
 		WS.Register( [ 'ScoreBoard.Team(' + t + ').Position(Jammer)' ]);
 		WS.Register( [ 'ScoreBoard.Team(' + t + ').Position(Pivot)' ]);
 		WS.Register([ 'ScoreBoard.Team(' + t + ').JamScore' ], function(k,v) {
@@ -94,7 +96,7 @@ function processCurrentJamLead(k, v, t){
 	updateLeadPct(t, id);
 }
 
-//LeadPct
+
 function processCurrentJamStarPass(k, v, t){
 // For a star pass event for the current jam
 	if (v == 'False') { return; }
@@ -119,6 +121,16 @@ function processCurrentJamStarPass(k, v, t){
 		incrementJams(t, newJammer);
 	}
 	
+}
+
+var penaltyRE = /ScoreBoard\.Team\(\d\)\.Skater\((\S+)\)\.Penalty\(\d\).Id/;
+function processPenalty(k,v,t){
+	var match = k.match(penaltyRE);
+	if (match == null || match.length == 0) { return; }
+	var id = match[1];
+	
+	updatePenaltyCount(t,id);
+
 }
 
 function newJam(period, jam) {
@@ -151,9 +163,6 @@ function newJam(period, jam) {
 	})
 
 }
-
-var starPassRE = /Game\.Period\((\d)\)\.Jam\((\d)\)\.Team\((\d)\)\.StarPass/;
-var leadRE = /Game\.Period\((\d)\)\.Jam\((\d)\)\.Team\((\d)\)\.LeadJammer/;
 
 function processGameEvent(k, v) { 
 	// Game events should be used to recreate the data in the event the screen is reloaded, or loaded after
@@ -212,6 +221,7 @@ function processPriorJam(p,j) {
 				incrementLead(t,id);
 			}
 			updateLeadPct(t,id);
+			updatePenaltyCount(t, id);
 		}
 		
 		
@@ -223,6 +233,7 @@ function processPriorJam(p,j) {
 				addJammer(t,id);
 				incrementJams(t,id);
 				updateLeadPct(t,id);
+				updatePenaltyCount(t,id);
 			}
 		}
 		
@@ -291,6 +302,14 @@ function updateLeadPct(t, id) {
 	leadPctCell.html(leadPct.toFixed(2));
 }
 
+function updatePenaltyCount(t,id) {
+	if (id == undefined || !jammerList.hasOwnProperty(id)) { return; }
+
+	var penaltyCell = $('.Team' + t + ' tbody tr.Jammer[data-number=' + 
+			jammerList[id].number + '] .Box');
+	penaltyCell.html(nPenalties(t,id));
+}
+
 function resetTable() {
 	// Clear the table
 	$.each([1, 2], function(idx, t) {
@@ -335,8 +354,26 @@ function processScoreboardColors(k, v, t){
 	$('.Team' + t + ' .TeamName').css('background-color', overlayBg);
 }
 
-
+function nPenalties(t, id) {
+// Given a team and skater ID, get the number of penalties presently in the state.
+	var prefix = 'ScoreBoard.Team(' + t + ').Skater(' + id + ').Penalty(';
+	var nPenalties = 0;
+	var code = '';
+	
+	for (var n=1; n < 10; n++){
+		code = WS.state[prefix + n + ').Code']
+		if (code == undefined){
+			return nPenalties;
+		} else if (code != 'FO_EXP'){
+			nPenalties += 1
+		}
+	}
+	
+	return nPenalties;
+}
 /*	// Process Star Pass events
+var starPassRE = /Game\.Period\((\d)\)\.Jam\((\d)\)\.Team\((\d)\)\.StarPass/;
+var leadRE = /Game\.Period\((\d)\)\.Jam\((\d)\)\.Team\((\d)\)\.LeadJammer/;
 var match = k.match(starPassRE);
 if (match != null && match.length != 0 && v == true){
 	var p = match[1];
