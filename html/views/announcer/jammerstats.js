@@ -13,23 +13,26 @@ function initialize() {
 	WS.AutoRegister();
 
 	$.each([1, 2], function(idx, t) {
-		WS.Register([ 'ScoreBoard.Team(' + t + ').Name' ]); 
+		WS.Register([ 'ScoreBoard.Team(' + t + ').Name' ], function(k,v) {
+			$('.Team' + t + ' .TeamName').html(v);
+		}); 
 		WS.Register([ 'ScoreBoard.Team(' + t + ').AlternateName' ]);
 		WS.Register([ 'ScoreBoard.Team(' + t + ').Color' ], function(k, v) { 
-			$('.Team' + t + 'custColor').css('color', WS.state['ScoreBoard.Team(' + t + ').Color(overlay_fg)']); 
-			$('.Team' + t + 'custColor').css('background-color', WS.state['ScoreBoard.Team(' + t + ').Color(overlay_bg)']); 
-			$('#head' + t).css('background-color', WS.state['ScoreBoard.Team(' + t + ').Color(overlay_bg)']); } );
-		
-		WS.Register([ 'ScoreBoard.Team(' + t + ').JamScore' ], function(k,v) {
-			processCurrentJamScore(k,v,t);
-		})
+			processScoreboardColors(k,v,t);		
+		});
 		
 		WS.Register( [ 'ScoreBoard.Team(' + t + ').Skater' ] ); 
 		WS.Register( [ 'ScoreBoard.Team(' + t + ').Position(Jammer)' ]);
 		WS.Register( [ 'ScoreBoard.Team(' + t + ').Position(Pivot)' ]);
+		WS.Register([ 'ScoreBoard.Team(' + t + ').JamScore' ], function(k,v) {
+			processCurrentJamScore(k,v,t);
+		})
 		WS.Register( [ 'ScoreBoard.Team(' + t + ').StarPass'], function(k,v) {
 			processCurrentJamStarPass(k,v,t);
 		});
+		WS.Register( [ 'ScoreBoard.Team(' + t + ').LeadJammer'], function(k,v) {
+			processCurrentJamLead(k,v,t);
+		});		
 		
 	});
 	
@@ -67,20 +70,43 @@ function processCurrentJamScore(k, v, t){
 	// Move the current jam score to "current jam" for the jammer.
 	jammerList[id].currentScore = v - spOffset[t];
 	
-	var scoreCell = $('.Team' +t + ' tbody tr.Jammer[data-number=' + 
+	var scoreCell = $('.Team' + t + ' tbody tr.Jammer[data-number=' + 
 			jammerList[id].number + '] .Pts');
 	scoreCell.html(jammerList[id].priorScore + jammerList[id].currentScore);
 	
 }
 
+function processCurrentJamLead(k, v, t){
+// For a "Lead" event for the current jam, increment the counter for the current jammer
+	console.log(k,v,t)
+	var id = WS.state['ScoreBoard.Team(' + t + ').Position(Jammer).Skater']
+	if (id==undefined){ return; } // can't do anything if no jammer is entered
+								  // Also resolves the "nolead" issued at the end of a jam
+
+	if (v == "Lead") { 
+		jammerList[id].lead += 1;
+	} else if (v == "NoLead") {
+		jammerList[id].lead -= 1;
+	}
+	var leadCell = $('.Team' + t + ' tbody tr.Jammer[data-number=' + 
+			jammerList[id].number + '] .Lead');
+	leadCell.html(jammerList[id].lead);
+	updateLeadPct(t, id);
+}
+
+//LeadPct
 function processCurrentJamStarPass(k, v, t){
-// For a star pass event for the current jam:
+// For a star pass event for the current jam
+	if (v == 'False') { return; }
+	var p = WS.state['ScoreBoard.Clock(Period).Number'];
+	var j = WS.state['ScoreBoard.Clock(Jam).Number'];
+	var prefix = 'Game.Period(' + p + ').Jam(' + j + ').Team(' + t + ')';
 		
 	// Set the star pass flag for team t
 	starPass[t] = true;
 	
-	var oldJammer = WS.state['ScoreBoard.Team('+t+').Position(Jammer).Skater'];
-	var newJammer = WS.state['ScoreBoard.Team('+t+').Position(Pivot).Skater'];
+	var oldJammer = WS.state[prefix + '.Skater(Jammer).Id'];
+	var newJammer = WS.state[prefix + '.Skater(Pivot).Id'];
 	
 	// Add the current points for the old jammer to their prior points
 	jammerList[oldJammer].priorScore += jammerList[oldJammer].currentScore;
@@ -185,6 +211,7 @@ function processPriorJam(p,j) {
 			if (leadStatus == 'Lead' || leadStatus == 'LostLead'){
 				incrementLead(t,id);
 			}
+			updateLeadPct(t,id);
 		}
 		
 		
@@ -195,6 +222,7 @@ function processPriorJam(p,j) {
 			if (id != null){
 				addJammer(t,id);
 				incrementJams(t,id);
+				updateLeadPct(t,id);
 			}
 		}
 		
@@ -244,16 +272,28 @@ function addJammer(t, id) {
 
 function incrementJams(t, id) {
 	// Given a team and a jammer ID, add one to their "jams" count
-	var jamsCell = $('.Team' + t + ' tbody tr.Jammer[data-number=' + jammerList[id].number + '] .Jams')
+	var jamsCell = $('.Team' + t + ' tbody tr.Jammer[data-number=' + jammerList[id].number + '] .Jams');
 	var jams = parseInt(jamsCell.html()) + 1;
 	jamsCell.html(jams);
 }
 
 function incrementLead(t, id) {
 	// Given a team and a jammer ID, add one to their "lead" count
-	var leadCell = $('.Team' + t + ' tbody tr.Jammer[data-number=' + jammerList[id].number + '] .Lead')
-	var leadCount = parseInt(leadCell.html()) + 1;
-	leadCell.html(leadCount);
+	var leadCell = $('.Team' + t + ' tbody tr.Jammer[data-number=' + jammerList[id].number + '] .Lead');
+	jammerList[id].lead += 1;
+	leadCell.html(jammerList[id].lead);
+}
+
+function updateLeadPct(t, id) {
+// Given a team and a jammer ID, update the lead percentage based on the current content of the table
+	var leadCell = $('.Team' + t + ' tbody tr.Jammer[data-number=' + jammerList[id].number + '] .Lead');
+	var jamsCell = $('.Team' + t + ' tbody tr.Jammer[data-number=' + jammerList[id].number + '] .Jams');
+	var leadPctCell = $('.Team' + t + ' tbody tr.Jammer[data-number=' + jammerList[id].number + '] .LeadPct');
+	var leadCount = parseInt(leadCell.html());
+	var jamsCount = parseInt(leadCell.html());
+	var leadPct = 100 * leadCount / jamsCount;
+	if (!leadPct) { leadPct = 0; }
+	leadPctCell.html(leadPct.toFixed(2));
 }
 
 function resetTable() {
@@ -287,6 +327,19 @@ function jamsInPeriod(p) {
 		}
 	}
 }
+
+function processScoreboardColors(k, v, t){
+// Given a change in overlay color, update the screen
+	var overlayFg = WS.state['ScoreBoard.Team(' + t + ').Color(overlay_fg)'];
+	var overlayBg = WS.state['ScoreBoard.Team(' + t + ').Color(overlay_bg)'];
+
+	if (overlayFg == null) { overlayFg == 'white'; }
+	if (overlayBg == null) { overlayBg == 'black'; }
+
+	$('.Team' + t + ' .TeamName').css('color', overlayFg); 
+	$('.Team' + t + ' .TeamName').css('background-color', overlayBg);
+}
+
 
 /*	// Process Star Pass events
 var match = k.match(starPassRE);
