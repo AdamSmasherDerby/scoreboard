@@ -91,9 +91,10 @@ function processCurrentJamLead(k, v, t){
 	var leadCell = $('.Team' + t + ' tbody tr.Jammer[data-number=' + 
 			jammerList[id].number + '] .Lead');
 	leadCell.html(jammerList[id].lead);
+	updateLeadPct(t, id);
 }
 
-
+//LeadPct
 function processCurrentJamStarPass(k, v, t){
 // For a star pass event for the current jam
 	if (v == 'False') { return; }
@@ -210,6 +211,7 @@ function processPriorJam(p,j) {
 			if (leadStatus == 'Lead' || leadStatus == 'LostLead'){
 				incrementLead(t,id);
 			}
+			updateLeadPct(t,id);
 		}
 		
 		
@@ -220,6 +222,7 @@ function processPriorJam(p,j) {
 			if (id != null){
 				addJammer(t,id);
 				incrementJams(t,id);
+				updateLeadPct(t,id);
 			}
 		}
 		
@@ -264,16 +267,28 @@ function addJammer(t, id) {
 
 function incrementJams(t, id) {
 	// Given a team and a jammer ID, add one to their "jams" count
-	var jamsCell = $('.Team' + t + ' tbody tr.Jammer[data-number=' + jammerList[id].number + '] .Jams')
+	var jamsCell = $('.Team' + t + ' tbody tr.Jammer[data-number=' + jammerList[id].number + '] .Jams');
 	var jams = parseInt(jamsCell.html()) + 1;
 	jamsCell.html(jams);
 }
 
 function incrementLead(t, id) {
 	// Given a team and a jammer ID, add one to their "lead" count
-	var leadCell = $('.Team' + t + ' tbody tr.Jammer[data-number=' + jammerList[id].number + '] .Lead')
+	var leadCell = $('.Team' + t + ' tbody tr.Jammer[data-number=' + jammerList[id].number + '] .Lead');
 	jammerList[id].lead += 1;
 	leadCell.html(jammerList[id].lead);
+}
+
+function updateLeadPct(t, id) {
+// Given a team and a jammer ID, update the lead percentage based on the current content of the table
+	var leadCell = $('.Team' + t + ' tbody tr.Jammer[data-number=' + jammerList[id].number + '] .Lead');
+	var jamsCell = $('.Team' + t + ' tbody tr.Jammer[data-number=' + jammerList[id].number + '] .Jams');
+	var leadPctCell = $('.Team' + t + ' tbody tr.Jammer[data-number=' + jammerList[id].number + '] .LeadPct');
+	var leadCount = parseInt(leadCell.html());
+	var jamsCount = parseInt(leadCell.html());
+	var leadPct = 100 * leadCount / jamsCount;
+	if (!leadPct) { leadPct = 0; }
+	leadPctCell.html(leadPct.toFixed(2));
 }
 
 function resetTable() {
