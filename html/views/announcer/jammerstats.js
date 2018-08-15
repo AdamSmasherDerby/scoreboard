@@ -57,6 +57,8 @@ function processCurrentJamScore(k, v, t){
 	var period = WS.state['ScoreBoard.Clock(Period).Number'];
 	var jam = WS.state['ScoreBoard.Clock(Jam).Number'];
 	var prefix = 'Game.Period(' + period + ').Jam(' + jam + ').Team(' + t + ')';
+	var jamScore = v;
+	var oppJamScore = WS.state['ScoreBoard.Team(' + (t%2 + 1) + ').JamScore']
 	
 	console.log(k, v, t)
 	// Find the ID for the jammer for the current jam
@@ -65,14 +67,36 @@ function processCurrentJamScore(k, v, t){
 	} else {
 		id = WS.state[prefix + '.Skater(Pivot).Id'];
 	}
-	if (id == null || id == undefined || jammerList[id] == undefined) { return; }
-
-	// Move the current jam score to "current jam" for the jammer.
-	jammerList[id].currentScore = v - spOffset[t];
+	if (id != null && id != undefined && jammerList[id] != undefined) { 
+		// Move the current jam score to "current jam" for the jammer.
+		jammerList[id].currentScore = jamScore - spOffset[t];
+		jammerList[id].currentDif = jamScore - oppJamScore - spOffset[t];
+		
+		// Update the Score Cell
+		var scoreCell = $('.Team' + t + ' tbody tr.Jammer[data-number=' + 
+				jammerList[id].number + '] .Pts');
+		scoreCell.html(jammerList[id].priorScore + jammerList[id].currentScore);
+		
+		// Update the Dif Cell
+		var difCell = $('.Team' + t + ' tbody tr.Jammer[data-number=' +
+				jammerList[id].number + '] .Dif');
+		difCell.html(jammerList[id].priorDif + jammerList[id].currentDif);	
+	}
 	
-	var scoreCell = $('.Team' + t + ' tbody tr.Jammer[data-number=' + 
-			jammerList[id].number + '] .Pts');
-	scoreCell.html(jammerList[id].priorScore + jammerList[id].currentScore);
+	// Find the ID for the opposing jammer
+	if(starPass[t%2 + 1] == false){
+		id = WS.state['Game.Period(' + period + ').Jam(' + jam + ').Team(' + (t%2 + 1) + ').Skater(Jammer).Id'];
+	} else {
+		id = WS.state['Game.Period(' + period + ').Jam(' + jam + ').Team(' + (t%2 + 1) + ').Skater(Pivot).Id'];
+	}
+	if (id != null && id != undefined && jammerList[id] != undefined) {
+		jammerList[id].currentDif = oppJamScore - jamScore - spOffset[t%2 + 1];
+		
+		var difCell = $('.Team' + (t%2 + 1) + ' tbody tr.Jammer[data-number=' + 
+				jammerList[id].number + '] .Dif');
+		difCell.html(jammerList[id].priorDif + jammerList[id].currentDif);
+	}
+	
 	
 }
 
@@ -113,6 +137,10 @@ function processCurrentJamStarPass(k, v, t){
 	spOffset[t] = jammerList[oldJammer].currentScore;
 	jammerList[oldJammer].currentScore = 0;
 	
+	// Update the dif
+	jammerList[oldJammer].priorDif += jammerList[oldJammer].currentDif;
+	jammerList[oldJammer].currentDif = 0;
+	
 	// Add the pivot to the skater list if not present
 	if (newJammer != null && newJammer != undefined){
 		addJammer(t, newJammer);
@@ -140,6 +168,8 @@ function newJam(period, jam) {
 		if (priorJammer == undefined || priorJammer == null || jammerList[priorJammer] == undefined) { return; }
 		jammerList[priorJammer].priorScore += jammerList[priorJammer].currentScore;
 		jammerList[priorJammer].currentScore = 0;
+		jammerList[priorJammer].priorDif += jammerList[priorJammer].currentDif;
+		jammerList[priorJammer].currentDif = 0;
 	})
 	
 	
@@ -178,10 +208,19 @@ function processGameEvent(k, v) {
 				j++;
 			}			
 		}
-		for (var j = 1; j <= currentJam; j++){
+		for (var j = 1; j < currentJam; j++){
 		// Add all the prior jammers for the current period
 			processPriorJam(currentPeriod, j);
 		}
+		// Update the information for the current jam, without points
+		$.each([1,2], function(idx,t) {
+			prefix = 'Game.Period(' + currentPeriod + ').Jam(' + currentJam + ').Team(' + t + ')';
+			id = WS.state[prefix + '.Skater(Jammer).Id'];
+			if (id != null){
+				addJammer(t, id);
+				incrementJams(t, id);
+			}
+		})
 	}
 		
 }
@@ -199,7 +238,7 @@ function processPriorJam(p,j) {
 	var leadStatus = '';
 	
 	$.each([1, 2], function(idx, t) {
-		prefix = 'Game.Period(' + p + ').Jam(' + j + ').Team(' + t + ')'
+		prefix = 'Game.Period(' + p + ').Jam(' + j + ').Team(' + t + ')';
 		id = WS.state[prefix + '.Skater(Jammer).Id'];
 		if (id != null) { 
 		// Add the jammer to the list and increment their "jams" count
@@ -236,18 +275,20 @@ function processPriorJam(p,j) {
 }
 
 function updatePriorScore(t, id, p, j){
-	// Given a skater and a jam, add the score for that jam to that skater's priorScore total
-	// and update the table.
-		var jamScore = WS.state['Game.Period(' + p +').Jam(' + j + ').Team(' + t + ').JamScore'];
-		jammerList[id].priorScore += parseInt(jamScore);
-		var scoreCell = $('.Team' + t + ' tbody tr.Jammer[data-number=' + jammerList[id].number + '] .Pts');
-		scoreCell.html(jammerList[id].priorScore);
-		
-		var difCell = $('.Team' + t + ' tbody tr.Jammer[data-number=' + jammerList[id].number + '] .Pts');
-		var oppJamScore = WS.state['Game.Period(' + p + ').Jam(' + j + ').Team(' + (t%2 + 1) + ').JamScore'];
-		var newDif = parseInt(difCell.html()) + parseInt(jamScore) - parseInt(oppJamScore);
-		difCell.html(newDif);
-	}
+// Given a skater and a jam, add the score for that jam to that skater's priorScore total
+// and update the table.
+	var jamScore = WS.state['Game.Period(' + p +').Jam(' + j + ').Team(' + t + ').JamScore'];
+	jammerList[id].priorScore += jamScore;
+	var scoreCell = $('.Team' + t + ' tbody tr.Jammer[data-number=' + jammerList[id].number + '] .Pts');
+	scoreCell.html(jammerList[id].priorScore);
+	
+	// Update the score difference column
+	var difCell = $('.Team' + t + ' tbody tr.Jammer[data-number=' + jammerList[id].number + '] .Dif');
+	var oppJamScore = WS.state['Game.Period(' + p + ').Jam(' + j + ').Team(' + (t%2 + 1) + ').JamScore'];
+	jammerList[id].priorDif = jammerList[id].priorDif + jamScore - oppJamScore;
+	difCell.html(jammerList[id].priorDif);
+	
+}
 
 function addJammer(t, id) {
 	// Given a team and Jammer ID, add them to the list if they are not present, and 
@@ -263,9 +304,12 @@ function addJammer(t, id) {
 			team: t,
 			priorScore: 0,
 			currentScore: 0,
-			lead: 0
+			lead: 0,
+			cuurentDif: 0,
+			priorDif: 0
 		}
 		table.append(makeJammerRow(id));
+		sortTableByNumber('.Team' + t);
 	}
 
 }
@@ -340,63 +384,22 @@ function processScoreboardColors(k, v, t){
 	$('.Team' + t + ' .TeamName').css('background-color', overlayBg);
 }
 
+function sortTableByNumber(tableName) {
+    var row, rowNumber;
+    var comparisonRow, comparisonNumber;
 
-/*	// Process Star Pass events
-var match = k.match(starPassRE);
-if (match != null && match.length != 0 && v == true){
-	var p = match[1];
-	var j = match[2];
-	var t = match[3];
-	var oldJammer = WS.state['Game.Period('+p+').Jam('+j+').Team('+t+').Skater(Jammer).Id'];
-	var newJammer = WS.state['Game.Period('+p+').Jam('+j+').Team('+t+').Skater(Pivot).Id'];
+    $(tableName + " tr.Jammer").each(function(i) {
+        row = $(tableName + " tr.Jammer:eq(" + i + ")");
+        rowNumber = row.attr('data-number');
 
-	// Set the star pass flag
-	starPass[t] = true;
-	
-	// Add the current points for the old jammer to their prior points
-	jammerList[oldJammer].priorScore += jammerList[oldJammer].currentScore;
-	spOffset[t] = jammerList[oldJammer].currentScore;
-	jammerList[oldJammer].currentScore = 0;
-	
-	// Add the pivot to the skater list if not present
-	if (newJammer != null && newJammer != undefined){
-		addJammer(t, newJammer);
-	}
-}
+        $(tableName + " tr.Jammer").each(function(j) {
+            comparisonRow = $(tableName + " tr.Jammer:eq(" + j + ")");
+            comparisonNumber = comparisonRow.attr('data-number');
 
-*/
-
-// Maybe come back to use this stuff.
-/*
-var prefix = '';
-var t = '';
-var teamTable;
-
-
-// If this is a jammer, add them to the list
-var match = k.match(jammerRegexp);
-if (match != null && v != null){
-	t = match[1];
-	teamTable = $('.Team' + t + ' tbody');
-	prefix = 'ScoreBoard.Team(' + t + ').Skater(' + v + ')';
-
-	if (!jammerList.hasOwnProperty(v)){
-	// If this is a new jammer, add them to the jammer list, and add a row to the display
-		jammerList[v] = {
-			name: WS.state[prefix + '.Name'],
-			number: WS.state[prefix + '.Number'],
-			team: t
-		}
-		console.log(jammerList);
-		teamTable.append(makeJammerRow(v));
-	}
-	
-	var jammerRow = teamTable.find('tr').filter(function() {return $(this).data('number') == jammerList[v].number})
-	console.log(WS.state['Game.Period(' + period + ').Jam(' + jam + ').JamLength']);
-	if (WS.state['Game.Period(' + period + ').Jam(' + jam + ').JamLength'] == '0:00') {
-		console.log('here');
-		jammerRow.find('td.Jams').html(+jammerRow.find('td.Jams').html() + 1);
-	}
-	
-	}
-	*/
+            if ( rowNumber < comparisonNumber ) {
+                $(row).insertBefore(comparisonRow);
+                return false;
+            }
+        });
+    });
+};
