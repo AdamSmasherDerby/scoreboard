@@ -210,10 +210,15 @@ function processPriorJam(p,j) {
 function updatePriorScore(t, id, p, j){
 	// Given a skater and a jam, add the score for that jam to that skater's priorScore total
 	// and update the table.
-		jammerList[id].priorScore += WS.state['Game.Period(' + p +').Jam(' + j + 
-			').Team(' + t + ').JamScore'];
-		var scoreCell = $('.Team' +t + ' tbody tr.Jammer[data-number=' + jammerList[id].number + '] .Pts');
+		var jamScore = WS.state['Game.Period(' + p +').Jam(' + j + ').Team(' + t + ').JamScore'];
+		jammerList[id].priorScore += parseInt(jamScore);
+		var scoreCell = $('.Team' + t + ' tbody tr.Jammer[data-number=' + jammerList[id].number + '] .Pts');
 		scoreCell.html(jammerList[id].priorScore);
+		
+		var difCell = $('.Team' + t + ' tbody tr.Jammer[data-number=' + jammerList[id].number + '] .Pts');
+		var oppJamScore = WS.state['Game.Period(' + p + ').Jam(' + j + ').Team(' + (t%2 + 1) + ').JamScore'];
+		var newDif = parseInt(difCell.html()) + parseInt(jamScore) - parseInt(oppJamScore);
+		difCell.html(newDif);
 	}
 
 function addJammer(t, id) {
