@@ -5,6 +5,7 @@ var jam = null;
 var jammerList = {};
 var starPass = {1: false, 2: false};
 var spOffset = {1: 0, 2: 0};
+var lead = {1: false, 2: false};
 
 function initialize() {
 	jammerList = {};
@@ -62,7 +63,7 @@ function processCurrentJamScore(k, v, t){
 	var jamScore = v;
 	var oppJamScore = WS.state['ScoreBoard.Team(' + (t%2 + 1) + ').JamScore']
 	
-	console.log(k, v, t)
+	// console.log(k, v, t)
 	// Find the ID for the jammer for the current jam
 	if(starPass[t] == false) {
 		id = WS.state[prefix + '.Skater(Jammer).Id'];
@@ -104,14 +105,15 @@ function processCurrentJamScore(k, v, t){
 
 function processCurrentJamLead(k, v, t){
 // For a "Lead" event for the current jam, increment the counter for the current jammer
-	console.log(k,v,t)
+	//console.log(k,v,t)
 	var id = WS.state['ScoreBoard.Team(' + t + ').Position(Jammer).Skater']
 	if (id==undefined){ return; } // can't do anything if no jammer is entered
 								  // Also resolves the "nolead" issued at the end of a jam
 
 	if (v == "Lead") { 
 		jammerList[id].lead += 1;
-	} else if (v == "NoLead") {
+		lead[t] = true;
+	} else if (v == "NoLead" && lead[t] == true) {
 		jammerList[id].lead -= 1;
 	}
 	var leadCell = $('.Team' + t + ' tbody tr.Jammer[data-number=' + 
@@ -168,6 +170,7 @@ function newJam(period, jam) {
 	var priorJammer = '';
 	starPass = {1: false, 2: false};
 	spOffset = {1: 0 , 2: 0 };
+	lead = {1: false, 2: false};
 	
 	$.each([1,2], function(idx, t) {
 		if (jam == 1) {
@@ -198,7 +201,7 @@ function processGameEvent(k, v) {
 	// Game events should be used to recreate the data in the event the screen is reloaded, or loaded after
 	// the game starts.
 	
-	console.log(k,v);
+	//console.log(k,v);
 		
 	if (k == 'Game.Period(1).Jam(1).PeriodClockStart'){
 	// Will trigger once per reload.
@@ -442,65 +445,4 @@ function sortTableByNumber(tableName) {
     });
 };
 
-/*	// Process Star Pass events
-var starPassRE = /Game\.Period\((\d)\)\.Jam\((\d)\)\.Team\((\d)\)\.StarPass/;
-var leadRE = /Game\.Period\((\d)\)\.Jam\((\d)\)\.Team\((\d)\)\.LeadJammer/;
-var match = k.match(starPassRE);
-if (match != null && match.length != 0 && v == true){
-	var p = match[1];
-	var j = match[2];
-	var t = match[3];
-	var oldJammer = WS.state['Game.Period('+p+').Jam('+j+').Team('+t+').Skater(Jammer).Id'];
-	var newJammer = WS.state['Game.Period('+p+').Jam('+j+').Team('+t+').Skater(Pivot).Id'];
-
-	// Set the star pass flag
-	starPass[t] = true;
-	
-	// Add the current points for the old jammer to their prior points
-	jammerList[oldJammer].priorScore += jammerList[oldJammer].currentScore;
-	spOffset[t] = jammerList[oldJammer].currentScore;
-	jammerList[oldJammer].currentScore = 0;
-	
-	// Add the pivot to the skater list if not present
-	if (newJammer != null && newJammer != undefined){
-		addJammer(t, newJammer);
-	}
-}
-
-*/
-
-// Maybe come back to use this stuff.
-/*
-var prefix = '';
-var t = '';
-var teamTable;
-
-
-// If this is a jammer, add them to the list
-var match = k.match(jammerRegexp);
-if (match != null && v != null){
-	t = match[1];
-	teamTable = $('.Team' + t + ' tbody');
-	prefix = 'ScoreBoard.Team(' + t + ').Skater(' + v + ')';
-
-	if (!jammerList.hasOwnProperty(v)){
-	// If this is a new jammer, add them to the jammer list, and add a row to the display
-		jammerList[v] = {
-			name: WS.state[prefix + '.Name'],
-			number: WS.state[prefix + '.Number'],
-			team: t
-		}
-		console.log(jammerList);
-		teamTable.append(makeJammerRow(v));
-	}
-	
-	var jammerRow = teamTable.find('tr').filter(function() {return $(this).data('number') == jammerList[v].number})
-	console.log(WS.state['Game.Period(' + period + ').Jam(' + jam + ').JamLength']);
-	if (WS.state['Game.Period(' + period + ').Jam(' + jam + ').JamLength'] == '0:00') {
-		console.log('here');
-		jammerRow.find('td.Jams').html(+jammerRow.find('td.Jams').html() + 1);
-	}
-	
-	}
-	*/
 
