@@ -125,7 +125,7 @@ function processCurrentJamLead(k, v, t){
 
 function processCurrentJamStarPass(k, v, t){
 // For a star pass event for the current jam
-	if (v == 'False') { return; }
+	if (v == false || v == null) { return; }
 	var p = WS.state['ScoreBoard.Clock(Period).Number'];
 	var j = WS.state['ScoreBoard.Clock(Jam).Number'];
 	var prefix = 'Game.Period(' + p + ').Jam(' + j + ').Team(' + t + ')';
@@ -149,6 +149,7 @@ function processCurrentJamStarPass(k, v, t){
 	if (newJammer != null && newJammer != undefined){
 		addJammer(t, newJammer);
 		incrementJams(t, newJammer);
+		updateLeadPct(t, id);
 	}
 	
 }
@@ -193,6 +194,8 @@ function newJam(period, jam) {
 		id = WS.state['ScoreBoard.Team(' + t + ').Position(Jammer).Skater'];
 		if (id == null) { return; }
 		addJammer(t,id);
+		incrementJams(t,id);
+		updateLeadPct(t,id);
 	})
 
 }
@@ -232,6 +235,7 @@ function processGameEvent(k, v) {
 				addJammer(t, id);
 				incrementJams(t, id);
 			}
+			updateLeadPcts('.Team' + t);
 		})
 	}
 		
@@ -284,6 +288,7 @@ function processPriorJam(p,j) {
 		// as the points per jammer aren't recorded.
 		if (id != null) {
 			updatePriorScore(t, id, p, j);
+			updateLeadPct(t, id);
 		}
 	})
 }
@@ -349,9 +354,11 @@ function updateLeadPct(t, id) {
 	var leadPctCell = $('.Team' + t + ' tbody tr.Jammer[data-number=' + jammerList[id].number + '] .LeadPct');
 	var leadCount = parseInt(leadCell.html());
 	var jamsCount = parseInt(leadCell.html());
-	var leadPct = 100 * leadCount / jamsCount;
-	if (!leadPct) { leadPct = 0; }
-	leadPctCell.html(leadPct.toFixed(2));
+	var leadPct = 0;
+	if (jamsCount > 0 && leadCount > 0){
+		leadPct = 100 * leadCount / jamsCount;
+	}
+	leadPctCell.html(leadPct.toFixed(0));
 }
 
 function updatePenaltyCount(t,id) {
@@ -446,3 +453,23 @@ function sortTableByNumber(tableName) {
 };
 
 
+function updateLeadPcts(tableName) {
+	var row;
+	var leadCell, jamsCell, leadPctCell;
+	var leadCount, jamsCount;
+	var leadPct;
+	
+	$(tableName + " tr.Jammer").each(function(i) {
+		leadPct = 0;
+		row = tableName + " tr.Jammer:eq(" + i + ")";
+		leadCell = $(row + " td.Lead");
+		jamsCell = $(row + " td.Jams");
+		leadPctCell = $(row + " td.LeadPct");
+		leadCount = parseInt(leadCell.html());
+		jamsCount = parseInt(jamsCell.html());
+		if (jamsCount > 0 && leadCount > 0){
+			leadPct = 100 * leadCount / jamsCount;
+		}
+		leadPctCell.html(leadPct.toFixed(0));
+	})
+}
