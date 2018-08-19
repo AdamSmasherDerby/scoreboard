@@ -107,7 +107,7 @@ function processCurrentJamLead(k, v, t){
 // For a "Lead" event for the current jam, increment the counter for the current jammer
 	//console.log(k,v,t)
 	var id = WS.state['ScoreBoard.Team(' + t + ').Position(Jammer).Skater']
-	if (id==undefined){ return; } // can't do anything if no jammer is entered
+	if (id==undefined || jammerList[id] == undefined){ return; } // can't do anything if no jammer is entered
 								  // Also resolves the "nolead" issued at the end of a jam
 
 	if (v == "Lead") { 
@@ -227,16 +227,21 @@ function processGameEvent(k, v) {
 		// Add all the prior jammers for the current period
 			processPriorJam(currentPeriod, j);
 		}
-		// Update the information for the current jam, without points
-		$.each([1,2], function(idx,t) {
-			prefix = 'Game.Period(' + currentPeriod + ').Jam(' + currentJam + ').Team(' + t + ')';
-			id = WS.state[prefix + '.Skater(Jammer).Id'];
-			if (id != null){
-				addJammer(t, id);
-				incrementJams(t, id);
-			}
-			updateLeadPcts('.Team' + t);
-		})
+		// Process the prior jam if we are between jams.
+		var running = WS.state['ScoreBoard.Clock(Jam).Running']
+		if (running){
+			processPriorJam(currentPeriod, currentJam);
+		} else {		
+			// Update the information for the current jam, without points
+			$.each([1,2], function(idx,t) {
+				prefix = 'Game.Period(' + currentPeriod + ').Jam(' + currentJam + ').Team(' + t + ')';
+				id = WS.state[prefix + '.Skater(Jammer).Id'];
+				if (id != null){
+					addJammer(t, id);
+				}
+				updateLeadPcts('.Team' + t);
+			})
+		}
 	}
 		
 }
@@ -353,7 +358,7 @@ function updateLeadPct(t, id) {
 	var jamsCell = $('.Team' + t + ' tbody tr.Jammer[data-number=' + jammerList[id].number + '] .Jams');
 	var leadPctCell = $('.Team' + t + ' tbody tr.Jammer[data-number=' + jammerList[id].number + '] .LeadPct');
 	var leadCount = parseInt(leadCell.html());
-	var jamsCount = parseInt(leadCell.html());
+	var jamsCount = parseInt(jamsCell.html());
 	var leadPct = 0;
 	if (jamsCount > 0 && leadCount > 0){
 		leadPct = 100 * leadCount / jamsCount;
