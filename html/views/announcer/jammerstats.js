@@ -44,7 +44,7 @@ function initialize() {
 		jam = v;
 		newJam(period, jam);
 	});
-
+	WS.Register( ['ScoreBoard.Clock(Jam).Running']);
 
 	WS.Register( [ 'Game' ], function(k,v){
 		processGameEvent(k,v);
@@ -228,20 +228,17 @@ function processGameEvent(k, v) {
 			processPriorJam(currentPeriod, j);
 		}
 		// Process the prior jam if we are between jams.
-		var running = WS.state['ScoreBoard.Clock(Jam).Running']
-		if (running){
-			processPriorJam(currentPeriod, currentJam);
-		} else {		
-			// Update the information for the current jam, without points
-			$.each([1,2], function(idx,t) {
-				prefix = 'Game.Period(' + currentPeriod + ').Jam(' + currentJam + ').Team(' + t + ')';
-				id = WS.state[prefix + '.Skater(Jammer).Id'];
-				if (id != null){
-					addJammer(t, id);
-				}
-				updateLeadPcts('.Team' + t);
-			})
-		}
+		var running = WS.state['ScoreBoard.Clock(Jam).Running']	
+		// Update the information for the current jam
+		$.each([1,2], function(idx,t) {
+			prefix = 'Game.Period(' + currentPeriod + ').Jam(' + currentJam + ').Team(' + t + ')';
+			id = WS.state[prefix + '.Skater(Jammer).Id'];
+			if (id != null){
+				addJammer(t, id);
+			}
+			updateLeadPcts('.Team' + t);
+		})
+	
 	}
 		
 }
