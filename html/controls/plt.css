@@ -12,7 +12,10 @@ table { border: 3px solid; border-radius: 5px; border-spacing: 0px; width: 100%;
 
 td { text-align: center; }
 
-div#tableDiv table thead tr.Team th { background: #aaa; }
+div#tableDiv table thead tr.Team th { 
+	background: #aaa;
+	font-size: x-large; 
+	}
 div#tableDiv table thead tr.Header th { background: #bbb; }
 
 div#tableDiv table tbody tr:nth-child(odd) td { background: #fff; }
@@ -25,13 +28,10 @@ div#tableDiv table td.Position,div#tableDiv table td.Box {
 	padding-bottom: 3px;
 }
 
-div#tableDiv table th.Number { width: 10%; }
-div#tableDiv table th.Name { width: 15%; }
-div#tableDiv table th.Bench { width: 15%; }
+div#tableDiv table th.Period {}
 div#tableDiv table th.Jammer { width: 15%; }
 div#tableDiv table th.Pivot { width: 15%; }
 div#tableDiv table th.Blocker { width: 15%; }
-div#tableDiv table th.Box { width: 15%; }
 
 div#tableDiv table.Template { display: none; }
 div#tableDiv table tr.Template { display: none; }
@@ -55,3 +55,29 @@ div#tableDiv table tr>td.Box.InBox { background: #f00; }
 div#tableDiv table tr>td.Box:not(.InBox)>a.Number { display: none; }
 div#tableDiv table tr>td.Box.InBox>a.Box { display: none; }
 
+
+div#entryDiv table td,th { border: solid 1px black; }
+
+div#entryDiv table thead tr.Jam th { 
+	background: #aaa;
+	font-size: x-large;
+}
+div#entryDiv table thead tr.Header th {background: #bbb}
+
+div#entryDiv table tbody tr { height: 50px;}
+
+div#entryDiv table tbody tr:nth-child(odd) td { background: #fff; }
+div#entryDiv table tbody tr:nth-child(even) td { background: #eee; }
+
+div#entryDiv table th.Position { width: 15%; }
+div#entryDiv table th.Number { width: 15%; }
+div#entryDiv table th.Penalties {width: 30%; }
+
+div#entryDiv table tr td.posLabel {font-weight: bold;}
+
+
+.PenaltyEditor .Codes>div { float: left; width: 150px; height: 80px; margin: 10px; border: 1px solid black; font-weight: bold; }
+.PenaltyEditor .Codes>div.Active { background-color: #F00; color: #FFF; }
+.PenaltyEditor .Codes>div div { text-align: center; }
+.PenaltyEditor .Codes>div .Code { font-size: 1.2em; background-color: #FAA; color: #000; }
+.PenaltyEditor .Codes>div .Description { font-size: 0.75em; }

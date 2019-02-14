@@ -11,16 +11,13 @@
 -->
 
 <script type="text/javascript" src="/external/jquery/jquery.js"></script>
+<script type="text/javascript" src="/external/jquery-ui/jquery-ui.js"></script>
 <script type="text/javascript" src="/json/core.js"></script>
 <script type="text/javascript" src="plt.js"></script>
 
 </head>
 
 <body>
-
-<div id="controlsDiv">
-
-</div>
 
 <div id="tableDiv">
 	<table class="Team1">
@@ -31,66 +28,100 @@
 				</th>
 			</tr>
 			<tr class="Header">
-				<th class="Jam">#</th>
+				<th class="Period">P</th>
+				<th class="Jam">J</th>
 				<th class="Jammer">Jammer</th>
 				<th class="Pivot">Pivot</th>
-				<th class="Blocker1">Blocker 1</th>
-				<th class="Blocker2">Blocker 2</th>
-				<th class="Blocker3">Blocker 3</th>
-			</tr>
-		</thead>
-		<tbody>
-		</tbody>
-	</table>
-</div>
-<!--  
-<div id="tableDiv">
-	<table class="Template">
-		<thead>
-			<tr class="Team">
-				<th class="Team" colspan="100%">
-					<a class="Team"></a>
-				</th>
-			</tr>
-			<tr class="Header">
-				<th class="Number">#</th>
-				<th class="Name">Name</th>
-				<th class="Bench">Bench</th>
-				<th class="Jammer">Jammer</th>
-				<th class="Pivot">Pivot</th>
-				<th class="Blocker">Blocker</th>
-				<th class="Box">Box</th>
+				<th class="Blocker1">Blocker</th>
+				<th class="Blocker2">Blocker</th>
+				<th class="Blocker3">Blocker</th>
 			</tr>
 		</thead>
 		<tbody>
 			<tr class="Template">
-				<td class="Number"><a class="Number"></a></td>
-				<td class="Name"><a class="Name"></a></td>
-				<td class="Bench Position">
-					<a class="Bench">Bench</a>
-					<a class="Number"></a>
-				</td>
-				<td class="Jammer Position">
-					<a class="Jammer">Jammer</a>
-					<a class="Number"></a>
-				</td>
-				<td class="Pivot Position">
-					<a class="Pivot">Pivot</a>
-					<a class="Number"></a>
-				</td>
-				<td class="Blocker Position">
-					<a class="Blocker">Blocker</a>
-					<a class="Number"></a>
-				</td>
-				<td class="Box">
-					<a class="Box">Box</a>
-					<a class="Number"></a>
-				</td>
+				<td class="Period"><a class="Period"></a></td>
+				<td class="Jam"><a class="Jam"></a></td>
+				<td class="Jammer"><a class="Jammer"></a></td>
+				<td class="Pivot"><a class="Pivot"></a></td>
+				<td class="Blocker1"><a class="Blocker1"></a></td>
+				<td class="Blocker2"><a class="Blocker2"></a></td>
+				<td class="Blocker3"><a class="Blocker3"></a></td>
+			</tr>
+			<tr  id="Period1Jam1">
+				<td class="Period"><a class="Period"></a></td>
+				<td class="Jam"><a class="Jam"></a></td>
+				<td class="Jammer"><a class="Jammer"></a></td>
+				<td class="Pivot"><a class="Pivot"></a></td>
+				<td class="Blocker1"><a class="Blocker1"></a></td>
+				<td class="Blocker2"><a class="Blocker2"></a></td>
+				<td class="Blocker3"><a class="Blocker3"></a></td>
 			</tr>
 		</tbody>
 	</table>
 </div>
--->
+<div id="entryDiv">
+	<table class="Team1">
+		<thead>
+			<tr class="Jam">
+				<th class="Jam" colspan="5">
+					<a class="Jam">Period 1 - Jam 1</a>
+				</th>
+			</tr>
+			<tr class="Header">
+				<th class="Position">Position</th>
+				<th class="Number">Number</th>
+				<th class="Penalties" colspan=3>Penalties</th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr class="jammerRow">
+				<td class="posLabel">Jammer</td>
+				<td class="Number"><a class="Number"></a></td>
+				<td class="penalty penalty1"></td>
+				<td class="penalty penalty2"></td>
+				<td class="penalty penalty3"></td>
+			</tr>
+			<tr class="pivotRow">
+				<td class="posLabel">Pivot</td>
+				<td class="Number"><a class="Number"></a></td>
+				<td class="penalty penalty1"></td>
+				<td class="penalty penalty2"></td>
+				<td class="penalty penalty3"></td>
+			</tr>
+			<tr class="blocker1Row">
+				<td class="posLabel">Blocker</td>
+				<td class="Number"><a class="Number"></a></td>
+				<td class="penalty penalty1"></td>
+				<td class="penalty penalty2"></td>
+				<td class="penalty penalty3"></td>
+			</tr>
+			<tr class="blocker2Row">
+				<td class="posLabel">Blocker</td>
+				<td class="Number"><a class="Number"></a></td>
+				<td class="penalty penalty1"></td>
+				<td class="penalty penalty2"></td>
+				<td class="penalty penalty3"></td>
+			</tr>
+			<tr class="blocker3Row">
+				<td class="posLabel">Blocker</td>
+				<td class="Number"><a class="Number"></a></td>
+				<td class="penalty penalty1"></td>
+				<td class="penalty penalty2"></td>
+				<td class="penalty penalty3"></td>
+			</tr>
+		</tbody>
+	</table>
+</div>
+<div style="display:none;" class="PenaltyEditor">
+	<table width="75%">
+		<tr>
+			<td width="33%">Period: <button class="period_minus">-1</button> <select class="Period"></select> <button class="period_plus">+1</button></td>
+			<td width="33%">Jam: <button class="jam_minus">-1</button> <select class="Jam"></select> <button class="jam_plus">+1</button></td>
+			<td width="33%"><button class="clear">Clear</button></td>
+		</tr>
+	</table>
+	<div class="Codes"></div>
+</div>
 </body>
 
 </html>
